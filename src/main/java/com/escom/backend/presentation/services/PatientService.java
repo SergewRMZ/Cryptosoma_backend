@@ -105,4 +105,18 @@ public class PatientService {
     return decryptedPrivateKey;
   }
 
+  public ResponseDTO revokeAccessToPharmacist(UUID prescriptionId, UUID pharmacistId, UUID usuarioId) {
+    AccessKey accessKey = accessKeyRepository.findByUsuario_IdAndPrescription_Id(pharmacistId, prescriptionId)
+      .orElseThrow(() -> new RuntimeException("No se encontró la llave de acceso para el farmacéutico con id: " + pharmacistId));
+    
+    Prescription receta = prescriptionRepository.findById(prescriptionId)
+      .orElseThrow(() -> new RuntimeException("Receta médica no encontrada en la base de datos"));
+
+    if(!receta.getPaciente().getUsuario().getId().equals(usuarioId)) {
+      throw new RuntimeException("No tienes permiso para eliminar este acceso");
+    }
+
+    accessKeyRepository.delete(accessKey);
+    return new ResponseDTO("success", "Se ha eliminado la llave de acceso al farmacéutico con ID: " + pharmacistId);
+  }
 }

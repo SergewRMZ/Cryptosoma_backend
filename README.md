@@ -84,3 +84,26 @@ http://localhost:8080/patient/grant-access
     "message": "Se ha creado una llave de acceso para el farmacéutico: b1060168-b395-476c-b97e-5cc6000acf40"
 }
 ```
+
+# Usuario elimina la llave de acceso de un farmacéutico
+## Descripción
+El paciente podrá ver en su receta médica qué farmacéutico tiene acceso a visualizar su receta médica.
+Puede eliminar la llave de acceso una vez que haya sido surtida la receta médica.
+
+## ENDPOINT DELETE
+```
+http://localhost:8080/patient/revoke-access?prescriptionId=21d0e6c3-6d0a-4d75-a58e-1cdb5e72f06f&pharmacistId=b1060168-b395-476c-b97e-5cc6000acf40
+```
+* Requiere Token de autenticación.
+
+## Response
+
+```
+{
+    "status": "success",
+    "message": "Se ha eliminado la llave de acceso al farmacéutico con ID: b1060168-b395-476c-b97e-5cc6000acf40"
+}
+```
+
+
+

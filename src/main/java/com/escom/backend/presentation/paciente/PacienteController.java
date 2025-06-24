@@ -4,9 +4,11 @@ import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.escom.backend.domain.dto.prescription.CreateAccessKeyPharmacistDTO;
@@ -23,4 +25,13 @@ public class PacienteController {
     UUID usuarioId = JwtSessionInfo.getUserId();
     return ResponseEntity.ok(patientService.grantAccessToPharmacist(dto, usuarioId));
   }
+
+  @DeleteMapping("/revoke-access")
+  public ResponseEntity<?> revokeAccess(
+    @RequestParam UUID prescriptionId,
+    @RequestParam UUID pharmacistId
+  ) {
+    UUID usuarioId = JwtSessionInfo.getUserId();
+    return ResponseEntity.ok(patientService.revokeAccessToPharmacist(prescriptionId, pharmacistId, usuarioId));
+  } 
 }
