@@ -29,6 +29,8 @@ import com.escom.backend.domain.repositories.UsuarioRepository;
 import com.escom.backend.presentation.cripto.AES_GCM;
 import com.escom.backend.presentation.cripto.ECDH25519;
 import com.escom.backend.presentation.services.security.AccessKeyService;
+import com.escom.backend.presentation.services.security.KeyAgreementService;
+import com.escom.backend.presentation.services.security.KeyAgreementService.KeyAgreementResult;
 
 @Service
 public class PatientService {
@@ -40,6 +42,7 @@ public class PatientService {
   @Autowired private UsuarioRepository usuarioRepository;
 
   @Autowired private AccessKeyService accessKeyService;
+  @Autowired private KeyAgreementService keyAgreementService;
 
   private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
 
@@ -55,10 +58,10 @@ public class PatientService {
       .orElseThrow(() -> new RuntimeException("Receta médica no encontrada"));
 
     Farmaceutico farmaceutico = farmaceuticoRepository.findById(accessPharmacistDTO.idFarmaceutico())
-      .orElseThrow(() -> new RuntimeException("Receta médica no encontrada"));
+      .orElseThrow(() -> new RuntimeException("Farmacéutico no encontrado"));
 
-    PublicKeyUser publicKeyPharmacist = publicKeyUserRepository.findByUsuario_IdAndKeyType(usuarioId, KeyType.ECDH)
-      .orElseThrow(() -> new RuntimeException("Llave pública de usuario no encontrada"));
+    PublicKeyUser publicKeyPharmacist = publicKeyUserRepository.findByUsuario_IdAndKeyType(accessPharmacistDTO.idFarmaceutico(), KeyType.ECDH)
+      .orElseThrow(() -> new RuntimeException("Llave pública de farmacéutico no encontrada"));
 
     PublicKeyUser publicKeyPatient = publicKeyUserRepository.findByUsuario_IdAndKeyType(usuarioId, KeyType.ECDH)
       .orElseThrow(() -> new RuntimeException("Llave públic del paciente no encontrada"));
@@ -72,24 +75,23 @@ public class PatientService {
     
     char[] passwordChar = accessPharmacistDTO.password().toCharArray(); 
     byte[] decodedEncryptedPrivateKey = Base64.getDecoder().decode(privateKeyUser.getEncryptedKey());
-    byte[] publicKeyPharmacistBytes = Base64.getDecoder().decode(publicKeyPharmacist.getPublicKey());
     byte[] accessKeyBytes = Base64.getDecoder().decode(accessKey.getKey());
     byte[] serverPublicKey = Base64.getDecoder().decode(accessKey.getServerPublicKey());
 
     try {
       byte[] decryptedPrivateKey = decryptPrivateKey(passwordChar, decodedEncryptedPrivateKey);
-      System.out.println("Llave privada: " + Base64.getEncoder().encodeToString(decryptedPrivateKey));
+      // System.out.println("Llave privada: " + Base64.getEncoder().encodeToString(decryptedPrivateKey));
       byte[] sharedKey = ECDH25519.deriveSharedSecret(decryptedPrivateKey, serverPublicKey);
       byte[] aesKey = AES_GCM.decryptGCM(accessKeyBytes, sharedKey);
-      System.out.println("Llave de AES con la que se cifró el archivo: " + Base64.getEncoder().encodeToString(aesKey));      
+      // System.out.println("Llave de AES con la que se cifró el archivo: " + Base64.getEncoder().encodeToString(aesKey));      
 
-      byte[] sharedKeyPhatmacistAndPatient = ECDH25519.deriveSharedSecret(decryptedPrivateKey, publicKeyPharmacistBytes);
-      String encryptedAESKey = AES_GCM.encryptGCM(aesKey, sharedKeyPhatmacistAndPatient);
+      KeyAgreementResult resultFarmaceutico = keyAgreementService.generateSharedKey(publicKeyPharmacist.getPublicKey());
+      String encodedKeyPharmacist = AES_GCM.encryptGCM(resultFarmaceutico.sharedKey(), aesKey);
       accessKeyService.createAccessKey(
         farmaceutico.getUsuario(), 
         prescription, 
-        encryptedAESKey, 
-        publicKeyPatient.getPublicKey());
+        encodedKeyPharmacist, 
+        resultFarmaceutico.serverKeyPair().getPublicKeyBase64());
     } catch (Exception e) {
       throw new RuntimeException(e.getMessage());
     }

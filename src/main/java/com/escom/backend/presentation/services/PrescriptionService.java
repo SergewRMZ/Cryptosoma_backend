@@ -14,9 +14,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.escom.backend.domain.dto.prescription.CreatePrescriptionDTO;
+import com.escom.backend.domain.dto.prescription.FillPrescriptionDTO;
 import com.escom.backend.domain.dto.prescription.GetEncryptedPrescriptionDTO;
 import com.escom.backend.domain.dto.prescription.PrescriptionDTO;
 import com.escom.backend.domain.dto.prescription.PrescriptionResponseDTO;
+import com.escom.backend.domain.dto.shared.ResponseDTO;
+import com.escom.backend.domain.dto.users.FarmaceuticoDTO;
 import com.escom.backend.domain.dto.users.MedicoDTO;
 import com.escom.backend.domain.dto.users.PacienteDTO;
 import com.escom.backend.domain.dto.users.UsuarioDTO;
@@ -24,8 +27,10 @@ import com.escom.backend.domain.entities.Prescription;
 import com.escom.backend.domain.entities.security.AccessKey;
 import com.escom.backend.domain.entities.security.KeyType;
 import com.escom.backend.domain.entities.security.PublicKeyUser;
+import com.escom.backend.domain.entities.users.Farmaceutico;
 import com.escom.backend.domain.entities.users.Medico;
 import com.escom.backend.domain.entities.users.Paciente;
+import com.escom.backend.domain.repositories.FarmaceuticoRepository;
 import com.escom.backend.domain.repositories.MedicoRepository;
 import com.escom.backend.domain.repositories.PacienteRepository;
 import com.escom.backend.domain.repositories.PrescriptionRepository;
@@ -47,11 +52,27 @@ public class PrescriptionService {
   @Autowired private PrescriptionRepository prescriptionRepository;
   @Autowired private PacienteRepository pacienteRepository;
   @Autowired private MedicoRepository medicoRepository;
+  @Autowired private FarmaceuticoRepository farmaceuticoRepository;
   @Autowired private PublicKeyUserRepository publicKeyUserRepository;
 
   @Autowired private SignatureService signatureService;
   @Autowired private KeyAgreementService keyAgreementService;
   @Autowired private AccessKeyService accessKeyService;
+
+  public ResponseDTO fillPrescription(UUID idReceta, UUID idPharmacist, FillPrescriptionDTO dto) {
+    Prescription prescription = prescriptionRepository.findById(idReceta)
+      .orElseThrow(() -> new RuntimeException("Receta médica no encontrada en la base de datos"));
+
+    Farmaceutico farmaceutico = farmaceuticoRepository.findById(idPharmacist)
+      .orElseThrow(()-> new RuntimeException("Farmacéutico no encontrado en la base de datos"));
+
+    prescription.setFecha_surtido(dto.fecha_surtido());
+    prescription.setSignaturePharmacist(dto.firma_farmaceutico());
+    prescription.setFarmaceutico(farmaceutico);
+    prescription.setSurtida(true);
+    prescriptionRepository.save(prescription);
+    return new ResponseDTO("success", "Receta médica firmada correctamente");
+  }
 
   public Map<String, Object> savePrescription(CreatePrescriptionDTO prescriptionDTO) {
     Paciente paciente = pacienteRepository.findById(prescriptionDTO.id_paciente)
@@ -182,12 +203,30 @@ public class PrescriptionService {
       prescription.getFecha_surtido()
     );
 
+    FarmaceuticoDTO farmaceuticoDTO = null;
+    if (Boolean.TRUE.equals(prescription.getSurtida())) {
+      Farmaceutico farmaceutico = prescription.getFarmaceutico();
+      UsuarioDTO usuarioDTO = new UsuarioDTO(
+        farmaceutico.getUsuario().getId(),
+        farmaceutico.getUsuario().getEmail(),
+        farmaceutico.getUsuario().getNombre(),
+        farmaceutico.getUsuario().getFechaNacimiento()
+      );
+
+      farmaceuticoDTO = new FarmaceuticoDTO(
+        usuarioDTO,
+        farmaceutico.getFarmacia(),
+        farmaceutico.getTelefono()
+      );
+    }
+
     return new GetEncryptedPrescriptionDTO(
       accessKey.getKey(),
       accessKey.getServerPublicKey(),
       encryptedPrescription,
       pacienteDTO,
       medicoDTO,
+      farmaceuticoDTO,
       prescriptionDTO
     );
   }

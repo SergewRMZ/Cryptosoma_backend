@@ -16,8 +16,8 @@ Este enpoint sirve para todos los roles (Médico, farmacéutico y paciente).
 ```
   http://localhost:8080/prescription/encrypted/<ID_RECETA>
 ```
-
-Por ahora, dado que falta la firma del farmacéutico, regresa lo siguiente.
+Si la receta no ha sido surtida, el valor del farmaceutico será null.
+Entonces hay que validar en frontend esa parte antes de mostrar los datos.
 
 ## RESPONSE
 ```
@@ -104,6 +104,16 @@ http://localhost:8080/patient/revoke-access?prescriptionId=21d0e6c3-6d0a-4d75-a5
     "message": "Se ha eliminado la llave de acceso al farmacéutico con ID: b1060168-b395-476c-b97e-5cc6000acf40"
 }
 ```
+
+# Firma de Farmacéutico
+
+## ENDPOINT POST
+
+```
+http://localhost:8080/prescription/258e90cc-8fb6-4163-a904-f5d576b75a80/fill
+```
+Se envían los siguientes datos
+
 
 
 

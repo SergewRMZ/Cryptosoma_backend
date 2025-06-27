@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.escom.backend.domain.dto.prescription.CreatePrescriptionDTO;
+import com.escom.backend.domain.dto.prescription.FillPrescriptionDTO;
 import com.escom.backend.presentation.securityJWT.JwtSessionInfo;
 import com.escom.backend.presentation.services.PrescriptionService;
 
@@ -37,6 +38,13 @@ public class PrescriptionController {
     return ResponseEntity.ok(result);
   }
 
+  @PostMapping("/{id}/fill")
+  public ResponseEntity<?> fillPrescription(@PathVariable("id") UUID idReceta, @RequestBody FillPrescriptionDTO dto) {
+    UUID idPharmacist = JwtSessionInfo.getUserId();
+
+    return ResponseEntity.ok(prescriptionService.fillPrescription(idReceta, idPharmacist, dto));
+  }
+
   @GetMapping("/{userId}")
   public ResponseEntity<?> getPrescriptionUser(@PathVariable("userId") UUID userId) {
     return ResponseEntity.ok(prescriptionService.getPrescriptionsByUser(userId));
@@ -44,7 +52,7 @@ public class PrescriptionController {
 
   @GetMapping("/encrypted/{recetaId}")
   public ResponseEntity<?> getAccessKeyForUser(@PathVariable UUID recetaId) {
-      UUID usuarioId = JwtSessionInfo.getUserId();
-      return ResponseEntity.ok(prescriptionService.getEncryptedPrescription(usuarioId, recetaId));
+    UUID usuarioId = JwtSessionInfo.getUserId();
+    return ResponseEntity.ok(prescriptionService.getEncryptedPrescription(usuarioId, recetaId));
   }
 }
