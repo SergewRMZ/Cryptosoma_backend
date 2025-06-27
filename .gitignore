@@ -2,6 +2,7 @@ HELP.md
 target/
 postgres/
 prescriptions/
+backend_cryptosoma.jar
 .env
 .mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
